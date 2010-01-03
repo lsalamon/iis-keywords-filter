@@ -272,7 +272,6 @@ DWORD CKeywordsFilter::onSendResponse(HTTP_FILTER_CONTEXT *pfc, PHTTP_FILTER_PRE
 					m_swm.WaitToWrite();
 					strcpy(pReq->m_item->encoding, charset + 8);
 					m_swm.Done();
-					//strncpy_s(pReq->m_szCharset, _countof(pReq->m_szCharset), charset + 8, _TRUNCATE);
 				}
 			}
 		}
@@ -284,16 +283,6 @@ DWORD CKeywordsFilter::onSendResponse(HTTP_FILTER_CONTEXT *pfc, PHTTP_FILTER_PRE
 			TRACE("don't do filter for %s\n", pReq->m_szUrl);
 			pfc->ServerSupportFunction( pfc, SF_REQ_DISABLE_NOTIFICATIONS, 0, SF_NOTIFY_SEND_RAW_DATA,0 );
 		}
-		/*else
-		{
-		TRACE("do filter for %s\n", pReq->m_szUrl);
-		dwBufSize = bufSize;
-		if( pHeader->GetHeader( pfc, "Content-Length:", buf, &dwBufSize) ) 
-		{
-		TRACE("content length is %s\n", buf);
-		pReq->m_contentLength = atoi(buf);
-		}
-		}*/
 		break;
 	default:
 		pfc->ServerSupportFunction( pfc, SF_REQ_DISABLE_NOTIFICATIONS, 0, SF_NOTIFY_SEND_RAW_DATA,0 );
