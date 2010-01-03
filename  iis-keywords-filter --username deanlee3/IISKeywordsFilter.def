@@ -1,0 +1,8 @@
+LIBRARY	"IISKeywordsFilter"
+ ;DESCRIPTION  'IISKeywordsFilter'
+
+EXPORTS
+	DllMain
+    HttpFilterProc
+    GetFilterVersion
+    TerminateFilter
