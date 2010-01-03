@@ -21,9 +21,9 @@
 * 
 */
 #pragma once
-#define ATL_ISAPI_BUFFER_SIZE  (64* 1024)
-template <DWORD dwSizeT=ATL_ISAPI_BUFFER_SIZE>
-class CAtlIsapiBuffer
+#define ISAPI_BUFFER_SIZE  (64* 1024)
+template <DWORD dwSizeT=ISAPI_BUFFER_SIZE>
+class CIsapiBuffer
 {
 protected:
 	char m_szBuffer[dwSizeT];
@@ -33,7 +33,7 @@ protected:
 	HANDLE m_hProcHeap;
 
 public:
-	CAtlIsapiBuffer() throw()
+	CIsapiBuffer() throw()
 	{
 		if (dwSizeT > 0)
 			m_szBuffer[0] = 0;
@@ -44,7 +44,7 @@ public:
 		m_hProcHeap = GetProcessHeap();
 	}
 
-	CAtlIsapiBuffer(__in LPCSTR sz)
+	CIsapiBuffer(__in LPCSTR sz)
 	{
 		m_pBuffer = m_szBuffer;
 		m_dwLen = 0;
@@ -55,7 +55,7 @@ public:
 			AtlThrow(E_OUTOFMEMORY);
 	}
 
-	~CAtlIsapiBuffer() throw()
+	~CIsapiBuffer() throw()
 	{
 		Free();
 	}
@@ -151,7 +151,7 @@ public:
 		}
 		if (newLen > m_dwAlloc)
 		{
-			if (!ReAlloc(m_dwAlloc + (nLen+1 > ATL_ISAPI_BUFFER_SIZE ? nLen+1 : ATL_ISAPI_BUFFER_SIZE)))
+			if (!ReAlloc(m_dwAlloc + (nLen+1 > ISAPI_BUFFER_SIZE ? nLen+1 : ISAPI_BUFFER_SIZE)))
 				return FALSE;
 		}
 		Checked::memcpy_s(m_pBuffer + m_dwLen, m_dwAlloc-m_dwLen, sz, nLen);
@@ -169,18 +169,18 @@ public:
 	{
 		return m_pBuffer;
 	}
-	CAtlIsapiBuffer& operator+=(__in LPCSTR sz)
+	CIsapiBuffer& operator+=(__in LPCSTR sz)
 	{
 		if (!Append(sz))
 			AtlThrow(E_OUTOFMEMORY);
 		return *this;
 	}
-}; // class CAtlIsapiBuffer
+}; // class CIsapiBuffer
 
-class CBodyBuffer : public CAtlIsapiBuffer<>
+class CBodyBuffer : public CIsapiBuffer<>
 {
 public:
-	CBodyBuffer() : CAtlIsapiBuffer<>(){}
+	CBodyBuffer() : CIsapiBuffer<>(){}
 	~CBodyBuffer(){}
 	DECLARE_OBJECT_POOL(CBodyBuffer);
 };
