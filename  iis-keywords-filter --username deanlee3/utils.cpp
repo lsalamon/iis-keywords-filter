@@ -22,6 +22,7 @@
 */
 #include "stdafx.h"
 #include "utils.h"
+
 void OutputArgumentedDebugString(LPCSTR szFormat, ... )
 {
 	va_list argList;

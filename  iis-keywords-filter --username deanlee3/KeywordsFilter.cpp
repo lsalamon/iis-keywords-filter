@@ -108,7 +108,8 @@ BOOL CKeywordsFilter::GetFilterVersion(HTTP_FILTER_VERSION *pVer)
 	TRACE("IISKeywordsFilter started\n");
 	GetModuleFileName(s_module, m_szModulePath, _countof(m_szModulePath));
 	::PathRemoveFileSpec(m_szModulePath);
-	return loadErrorHtml() && loadKeywords("us-ascii,gb2312,utf-8,big5");
+
+	return loadConfig() && loadErrorHtml() && loadKeywords("us-ascii,gb2312,utf-8,big5");
 }
 
 DWORD CKeywordsFilter::HttpFilterProc(HTTP_FILTER_CONTEXT *pfc, DWORD NotificationType, VOID *pvData)
@@ -163,14 +164,13 @@ void CKeywordsFilter::writeErrorToClient(HTTP_FILTER_CONTEXT *pfc, int keywordIn
 Content-Type: text/html; charset=UTF-8\n\
 Content-Length: %d\
 \r\n\r\n%s";
-	size_t size = strlen(s_header) + strlen(m_errorHtml) + 1024;
-	char* buffer = (char*)pfc->AllocMem(pfc, size, 0);
 	CStringA error = m_errorHtml;
 	CStringA keyword = m_patterns.GetAt(m_patterns.FindIndex(keywordIndex));
 	error.Replace("{KEYWORD}", keyword);
-	_snprintf(buffer, size, s_header, error.GetLength(), error.GetString());
-	size = strlen(buffer);
-	pfc->WriteClient(pfc, buffer, (DWORD*)&size, 0 );
+	CStringA output;
+	output.Format(s_header, error.GetLength(), (LPCSTR)error);
+	DWORD size = output.GetLength();
+	pfc->WriteClient(pfc, (LPVOID)((LPCSTR)output), (DWORD*)&size, 0 );
 }
 
 DWORD CKeywordsFilter::onPreprocHeaders(HTTP_FILTER_CONTEXT *pfc, PHTTP_FILTER_PREPROC_HEADERS pPreprocData)
@@ -187,13 +187,23 @@ DWORD CKeywordsFilter::onPreprocHeaders(HTTP_FILTER_CONTEXT *pfc, PHTTP_FILTER_P
 		dwSize= _countof(url) - dwSize;
 		if( pPreprocData->GetHeader(pfc, "URL", u, &dwSize ) )
 		{
+			char szExt[25] = {'\0'};
+			char* ext = strrchr(url, '.');
+			if (ext)
+			{
+				strncpy_s(szExt, ext, _TRUNCATE);
+				TRACE("ext is :%s", szExt);
+			}
 			doFilter = true;
 			m_swm.WaitToRead();
 			if (m_urlMap.Lookup(url, pItem))
 			{
-				if ((time(NULL) - pItem->timestamp) <= 30 * 1000)
+				int timeInterval = (strcmp(szExt, ".htm") || strcmp(szExt, ".html")) ? m_config.dynamicRescanInterval : m_config.staticRescanInterval;
+				if ((time(NULL) - pItem->timestamp) <= timeInterval)
 				{
-					//doFilter = false;
+					doFilter = false;
+					TRACE("don't do filter\n");
+
 				}
 			}
 			m_swm.Done();
@@ -219,7 +229,6 @@ DWORD CKeywordsFilter::onPreprocHeaders(HTTP_FILTER_CONTEXT *pfc, PHTTP_FILTER_P
 
 	if(!doFilter) 
 	{
-		TRACE("don't do filter\n");
 		pfc->ServerSupportFunction(pfc, SF_REQ_DISABLE_NOTIFICATIONS, 0, SF_NOTIFY_SEND_RESPONSE|SF_NOTIFY_SEND_RAW_DATA, 0);
 		if (pItem && pItem->keywordIndex != -1)
 		{
@@ -354,8 +363,6 @@ DWORD CKeywordsFilter::onSendRawData(HTTP_FILTER_CONTEXT* pfc, PHTTP_FILTER_RAW_
 	{
 		pReq->m_flag = CReqContext::IN_HEAD;
 		char* type = FindHttpHeader("Content-Type:", (char*)pRawData->pvInData, pRawData->cbInData);
-		if (type)
-			TRACE("TYPE is %s\n", type);
 		if (type && strncmp(type, " text/", 6) == 0)
 		{
 			pReq->m_body = new CBodyBuffer();
@@ -401,12 +408,19 @@ DWORD CKeywordsFilter::onEndOfRequest(HTTP_FILTER_CONTEXT* pfc)
 
 	if (pReq->m_item->encoding[0] == '\0')
 	{
-		// detect the code page
-		MIMECPINFO cpinfo;
-		UINT codepage = detectBestCodePage(NULL, *pReq->m_body, pReq->m_body->GetLength(), cpinfo);
-		CW2A encod(cpinfo.wszBodyCharset);
-		TRACE("Detected encoding is :%s\n", encod.m_psz);
-		strncpy_s(pReq->m_item->encoding, encod.m_psz, _TRUNCATE);
+		if (m_config.autoDetectEncoding)
+		{
+			// detect the code page
+			MIMECPINFO cpinfo;
+			UINT codepage = detectBestCodePage(NULL, *pReq->m_body, pReq->m_body->GetLength(), cpinfo);
+			CW2A encod(cpinfo.wszBodyCharset);
+			TRACE("Detected encoding is :%s\n", encod.m_psz);
+			strncpy_s(pReq->m_item->encoding, encod.m_psz, _TRUNCATE);
+		}
+		else
+		{
+			strncpy_s(pReq->m_item->encoding, m_config.defaultEncoding, _TRUNCATE);
+		}
 	}
 	void *wumanber = NULL;
 	m_swm.WaitToRead();
@@ -551,6 +565,18 @@ void* CKeywordsFilter::loadKeywords(IMultiLanguage2* pML, WCHAR* keywords, UINT 
 		delete dest;
 	}
 	return wu;
+}
+
+bool CKeywordsFilter::loadConfig()
+{
+	TCHAR path[MAX_PATH];
+	::PathCombine(path, m_szModulePath, _T("config.ini"));
+	CW2A p(path);
+	m_config.autoDetectEncoding = GetPrivateProfileIntA("config", "auto_detect_encoding", 1, p);
+	m_config.staticRescanInterval = GetPrivateProfileIntA("config", "static_rescan_interval", 60 * 60 , p) * 1000;
+	m_config.dynamicRescanInterval = GetPrivateProfileIntA("config", "dynamic_rescan_interval", 10 * 60, p) * 1000;
+	GetPrivateProfileStringA("config", "default_encoding", "utf-8", m_config.defaultEncoding, _countof(m_config.defaultEncoding), p);
+	return true;
 }
 
 
