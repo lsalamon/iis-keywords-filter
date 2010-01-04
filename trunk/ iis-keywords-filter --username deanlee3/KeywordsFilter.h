@@ -31,7 +31,7 @@ public:
 		encoding[0] = '\0';
 		keywordIndex = -1;
 	}
-	int timestamp;
+	time_t timestamp;
 	char encoding[50];
 	int keywordIndex;
 	DECLARE_OBJECT_POOL(UrlItem);
@@ -57,9 +57,7 @@ public:
 	char m_szUrl[1024];
 	FLAG m_flag;
 	char m_encoding[50];
-	//char m_szCharset[250];
 	UrlItem* m_item;
-
 	DECLARE_OBJECT_POOL(CReqContext);
 
 };
@@ -79,6 +77,14 @@ public:
 	TCHAR m_szModulePath[MAX_PATH];
 
 protected:
+	struct Config
+	{
+		bool autoDetectEncoding;
+		int staticRescanInterval;
+		int dynamicRescanInterval;
+		char defaultEncoding[512];
+	};
+protected:
 	DWORD onPreprocHeaders(HTTP_FILTER_CONTEXT *pfc, PHTTP_FILTER_PREPROC_HEADERS pvData);
 	DWORD onSendResponse(HTTP_FILTER_CONTEXT *pfc, PHTTP_FILTER_PREPROC_HEADERS pHeader);
 	DWORD onSendRawData(HTTP_FILTER_CONTEXT* pfc, PHTTP_FILTER_RAW_DATA pRawData);
@@ -86,6 +92,7 @@ protected:
 	DWORD onEndOfNetSession(HTTP_FILTER_CONTEXT *pfc);
 	void* loadKeywords(IMultiLanguage2* pML, WCHAR* keywords, UINT toCodePage, bool First);
 	bool loadErrorHtml();
+	bool loadConfig();
 	void writeErrorToClient(HTTP_FILTER_CONTEXT *pfc, int keywordIndex);
 	UINT detectBestCodePage(IMultiLanguage2* pML2, const char* src, int len, MIMECPINFO& minfo);
 protected:
@@ -95,4 +102,5 @@ protected:
 	CRITICAL_SECTION m_crit;
 	CSWMRG m_swm;
 	CAtlList<CStringA> m_patterns;
+	struct Config m_config;
 };
