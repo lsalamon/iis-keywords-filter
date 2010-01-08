@@ -541,6 +541,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\Log.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\mwm.c"
 				>
 				<FileConfiguration
@@ -656,6 +660,10 @@
 			</File>
 			<File
 				RelativePath=".\Link.h"
+				>
+			</File>
+			<File
+				RelativePath=".\Log.h"
 				>
 			</File>
 			<File

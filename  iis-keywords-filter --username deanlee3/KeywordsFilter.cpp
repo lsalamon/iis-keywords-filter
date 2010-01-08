@@ -157,22 +157,6 @@ BOOL CKeywordsFilter::TerminateFilter(DWORD dwFlags)
 	return true;
 }
 
-void CKeywordsFilter::writeErrorToClient(HTTP_FILTER_CONTEXT *pfc, int keywordIndex)
-{
-	static char s_header[] = 
-"HTTP/1.1 200 OK\n\
-Content-Type: text/html; charset=UTF-8\n\
-Content-Length: %d\
-\r\n\r\n%s";
-	CStringA error = m_errorHtml;
-	CStringA keyword = m_patterns.GetAt(m_patterns.FindIndex(keywordIndex));
-	error.Replace("{KEYWORD}", keyword);
-	CStringA output;
-	output.Format(s_header, error.GetLength(), (LPCSTR)error);
-	DWORD size = output.GetLength();
-	pfc->WriteClient(pfc, (LPVOID)((LPCSTR)output), (DWORD*)&size, 0 );
-}
-
 DWORD CKeywordsFilter::onPreprocHeaders(HTTP_FILTER_CONTEXT *pfc, PHTTP_FILTER_PREPROC_HEADERS pPreprocData)
 {
 	DWORD dwRet = SF_STATUS_REQ_NEXT_NOTIFICATION;
@@ -248,9 +232,6 @@ DWORD CKeywordsFilter::onSendResponse(HTTP_FILTER_CONTEXT *pfc, PHTTP_FILTER_PRE
 		return dwRet;
 	}
 	pReq->doFilter = false;
-	const int bufSize = 1024;
-	char buf[bufSize];
-	DWORD dwBufSize = bufSize;
 	switch(pHeader->HttpStatus) 
 	{
 	case 100:
@@ -260,6 +241,9 @@ DWORD CKeywordsFilter::onSendResponse(HTTP_FILTER_CONTEXT *pfc, PHTTP_FILTER_PRE
 	case 200:
 		if (!pReq->m_item)
 		{
+			const int bufSize = 1024;
+			char buf[bufSize];
+			DWORD dwBufSize = bufSize;
 			if( pHeader->GetHeader(pfc, "Content-Type:", buf, &dwBufSize) ) 
 			{
 				TRACE("content-type:%s\n", buf);
@@ -298,6 +282,22 @@ DWORD CKeywordsFilter::onSendResponse(HTTP_FILTER_CONTEXT *pfc, PHTTP_FILTER_PRE
 		break;
 	} 
 	return dwRet;
+}
+
+void CKeywordsFilter::writeErrorToClient(HTTP_FILTER_CONTEXT *pfc, int keywordIndex)
+{
+	static char s_header[] = 
+"HTTP/1.1 200 OK\n\
+Content-Type: text/html; charset=UTF-8\n\
+Content-Length: %d\
+\r\n\r\n%s";
+	CStringA error = m_errorHtml;
+	CStringA keyword = m_patterns.GetAt(m_patterns.FindIndex(keywordIndex));
+	error.Replace("{KEYWORD}", keyword);
+	CStringA output;
+	output.Format(s_header, error.GetLength(), (LPCSTR)error);
+	DWORD size = output.GetLength();
+	pfc->WriteClient(pfc, (LPVOID)((LPCSTR)output), (DWORD*)&size, 0 );
 }
 
 int match(void * id, int index, void *data)
@@ -457,9 +457,6 @@ DWORD CKeywordsFilter::onEndOfRequest(HTTP_FILTER_CONTEXT* pfc)
 	pReq->m_body = NULL;
 	return dwRet;
 }
-
-
-
 
 bool CKeywordsFilter::loadKeywords(LPCSTR charsets)
 {
