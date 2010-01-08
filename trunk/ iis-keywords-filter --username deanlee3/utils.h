@@ -21,7 +21,7 @@
 * 
 */
 #pragma once
-#define ISAPI_BUFFER_SIZE  (64* 1024)
+#define ISAPI_BUFFER_SIZE  (64* 1024) // 64KB
 template <DWORD dwSizeT=ISAPI_BUFFER_SIZE>
 class CIsapiBuffer
 {
