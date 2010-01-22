@@ -72,8 +72,7 @@ CReqContext::~CReqContext(void)
 void CReqContext::destroy(PHTTP_FILTER_CONTEXT pfc)
 {
 	CReqContext* pContext = get(pfc);
-	if (pContext != NULL)
-	{
+	if (pContext != NULL) {
 		delete pContext;
 	}
 	pfc->pFilterContext = NULL;
@@ -147,8 +146,7 @@ DWORD CKeywordsFilter::onEndOfNetSession(HTTP_FILTER_CONTEXT *pfc)
 BOOL CKeywordsFilter::TerminateFilter(DWORD dwFlags)
 {
 	POSITION pos = m_urlMap.GetStartPosition();
-	while (pos)
-	{
+	while (pos) {
 		delete m_urlMap.GetNext(pos)->m_value;
 	}
 	m_urlMap.RemoveAll();
@@ -165,42 +163,34 @@ DWORD CKeywordsFilter::onPreprocHeaders(HTTP_FILTER_CONTEXT *pfc, PHTTP_FILTER_P
 	DWORD dwSize= _countof(url);
 
 	UrlItem* pItem = NULL;
-	if (pPreprocData->GetHeader(pfc, "Host:", url, &dwSize))
-	{
+	if (pPreprocData->GetHeader(pfc, "Host:", url, &dwSize)) {
 		char* u = url + dwSize - 1;
 		dwSize= _countof(url) - dwSize;
-		if( pPreprocData->GetHeader(pfc, "URL", u, &dwSize ) )
-		{
+		if (pPreprocData->GetHeader(pfc, "URL", u, &dwSize )) {
 			char szExt[25] = {'\0'};
 			char* ext = strrchr(url, '.');
-			if (ext)
-			{
+			if (ext) {
 				strncpy_s(szExt, ext, _TRUNCATE);
 				TRACE("ext is :%s", szExt);
 			}
 			doFilter = true;
 			m_swm.WaitToRead();
-			if (m_urlMap.Lookup(url, pItem))
-			{
+			if (m_urlMap.Lookup(url, pItem)) {
 				int timeInterval = (strcmp(szExt, ".htm") || strcmp(szExt, ".html")) ? m_config.dynamicRescanInterval : m_config.staticRescanInterval;
-				if ((time(NULL) - pItem->timestamp) <= timeInterval)
-				{
+				if ((time(NULL) - pItem->timestamp) <= timeInterval) {
 					doFilter = false;
 					TRACE("don't do filter\n");
 
 				}
 			}
 			m_swm.Done();
-			if (doFilter)
-			{
+			if (doFilter) {
 				CReqContext* pReq = CReqContext::get(pfc);
-				if( !pReq ) 
-				{
+				if (!pReq ) {
 					pReq = CReqContext::create(pfc);
 					return dwRet;
 				}
-				else
-				{
+				else {
 					TRACE("Get context from cache\n");
 					pReq->Init();
 
@@ -211,11 +201,9 @@ DWORD CKeywordsFilter::onPreprocHeaders(HTTP_FILTER_CONTEXT *pfc, PHTTP_FILTER_P
 		}
 	}
 
-	if(!doFilter) 
-	{
+	if (!doFilter) {
 		pfc->ServerSupportFunction(pfc, SF_REQ_DISABLE_NOTIFICATIONS, 0, SF_NOTIFY_SEND_RESPONSE|SF_NOTIFY_SEND_RAW_DATA, 0);
-		if (pItem && pItem->keywordIndex != -1)
-		{
+		if (pItem && pItem->keywordIndex != -1) {
 			writeErrorToClient(pfc, pItem->keywordIndex);
 			dwRet = SF_STATUS_REQ_FINISHED;
 		}
@@ -227,52 +215,44 @@ DWORD CKeywordsFilter::onSendResponse(HTTP_FILTER_CONTEXT *pfc, PHTTP_FILTER_PRE
 {
 	DWORD dwRet = SF_STATUS_REQ_NEXT_NOTIFICATION;
 	CReqContext* pReq = CReqContext::get(pfc);
-	if( !pReq ) 
-	{
+	if (!pReq) {
 		return dwRet;
 	}
 	pReq->doFilter = false;
-	switch(pHeader->HttpStatus) 
-	{
+	switch(pHeader->HttpStatus) {
 	case 100:
 		pReq->doFilter = false;
 		return dwRet;
 		break;
 	case 200:
-		if (!pReq->m_item)
-		{
+		if (!pReq->m_item) {
 			const int bufSize = 1024;
 			char buf[bufSize];
 			DWORD dwBufSize = bufSize;
-			if( pHeader->GetHeader(pfc, "Content-Type:", buf, &dwBufSize) ) 
-			{
+			if (pHeader->GetHeader(pfc, "Content-Type:", buf, &dwBufSize)) {
 				TRACE("content-type:%s\n", buf);
 				pReq->doFilter = strncmp( buf, "text/html", 9) == 0;
-				if (pReq->doFilter && !pReq->m_item)
-				{
+				if (pReq->doFilter && !pReq->m_item) {
 					// add to map
 					m_swm.WaitToWrite();
-					if (!m_urlMap.Lookup(pReq->m_szUrl, pReq->m_item))
-					{
+					if (!m_urlMap.Lookup(pReq->m_szUrl, pReq->m_item)) {
 						pReq->m_item = new UrlItem();
 						m_urlMap.SetAt(pReq->m_szUrl, pReq->m_item);
 					}
 					m_swm.Done();
 				}
 				char* charset = strstr(buf, "charset=");
-				if (charset)
-				{
+				if (charset) {
 					m_swm.WaitToWrite();
 					strcpy(pReq->m_item->encoding, charset + 8);
 					m_swm.Done();
 				}
 			}
 		}
-		else
-		{
+		else {
 			pReq->doFilter = true;
 		}
-		if(!pReq->doFilter) {
+		if (!pReq->doFilter) {
 			TRACE("don't do filter for %s\n", pReq->m_szUrl);
 			pfc->ServerSupportFunction( pfc, SF_REQ_DISABLE_NOTIFICATIONS, 0, SF_NOTIFY_SEND_RAW_DATA,0 );
 		}
@@ -309,16 +289,13 @@ int match(void * id, int index, void *data)
 
 UINT CKeywordsFilter::detectBestCodePage(IMultiLanguage2* pML2, const char* src, int len, MIMECPINFO& minfo)
 {
-	if (!pML2)
-	{
+	if (!pML2) {
 		pML2 = (IMultiLanguage2*)TlsGetValue(s_tlslot);
 	}
-	if (!pML2)
-	{
+	if (!pML2) {
 		CComPtr<IMultiLanguage2> spML2;
 		HRESULT hr = ::CoCreateInstance(CLSID_CMultiLanguage, NULL, CLSCTX_INPROC_SERVER, IID_IMultiLanguage2, (LPVOID*)&spML2);
-		if (SUCCEEDED(hr))
-		{
+		if (SUCCEEDED(hr)) {
 			pML2 = spML2.Detach();
 			TlsSetValue(s_tlslot, spML2.Detach());
 		}
@@ -328,9 +305,8 @@ UINT CKeywordsFilter::detectBestCodePage(IMultiLanguage2* pML2, const char* src,
 	int infoSize = 5;
 	pML2->DetectInputCodepage(0, 0, (CHAR*)src, &len, info, &infoSize);
 	int max_conf = -1, best = -1;
-	for ( int i = 0; i < infoSize; ++i ) {
-		if (info[i].nCodePage == 65001)
-		{
+	for (int i = 0; i < infoSize; ++i ) {
+		if (info[i].nCodePage == 65001) {
 			best = i;
 			break;
 		}
@@ -339,8 +315,7 @@ UINT CKeywordsFilter::detectBestCodePage(IMultiLanguage2* pML2, const char* src,
 			max_conf = info[i].nConfidence;
 		}
 	}
-	if (best != -1)
-	{
+	if (best != -1) {
 		pML2->GetCodePageInfo(info[best].nCodePage, info[best].nLangID, &minfo);
 		uCodePage = info[best].nCodePage;
 	}
@@ -353,32 +328,26 @@ DWORD CKeywordsFilter::onSendRawData(HTTP_FILTER_CONTEXT* pfc, PHTTP_FILTER_RAW_
 	TRACE("onSendRawData\n");
 	DWORD dwRet = SF_STATUS_REQ_NEXT_NOTIFICATION;
 	CReqContext* pReq = CReqContext::get(pfc);
-	if( !pReq || !pReq->m_item || !pReq->doFilter) 
-	{
+	if ( !pReq || !pReq->m_item || !pReq->doFilter) {
 		return dwRet;
 	}
 	TRACE("do onSendRawData\n");
 	
-	if (pReq->m_flag == CReqContext::IN_NONE)
-	{
+	if (pReq->m_flag == CReqContext::IN_NONE) {
 		pReq->m_flag = CReqContext::IN_HEAD;
 		char* type = FindHttpHeader("Content-Type:", (char*)pRawData->pvInData, pRawData->cbInData);
-		if (type && strncmp(type, " text/", 6) == 0)
-		{
+		if (type && strncmp(type, " text/", 6) == 0) {
 			pReq->m_body = new CBodyBuffer();
 		}
-		else
-		{
+		else {
 			TRACE("it is'nt a valid text stream\n");
 			pReq->m_flag = CReqContext::IN_ERROR;
 		}
 	}
-	if (pReq->m_flag == CReqContext::IN_HEAD)
-	{
+	if (pReq->m_flag == CReqContext::IN_HEAD) {
 		TRACE("IN_HEAD\n");
 		char* headerEnd = strnstr((char*)pRawData->pvInData, "\r\n\r\n", pRawData->cbInData);
-		if (headerEnd)
-		{
+		if (headerEnd) {
 			pReq->m_flag = CReqContext::IN_BODY;
 			pReq->m_bodyPos = headerEnd + 4 - (char*)pRawData->pvInData;
 		}
@@ -386,11 +355,9 @@ DWORD CKeywordsFilter::onSendRawData(HTTP_FILTER_CONTEXT* pfc, PHTTP_FILTER_RAW_
 		pRawData->pvInData = NULL;
 		pRawData->cbInData = NULL;
 	}
-	if (pReq->m_flag == CReqContext::IN_BODY)
-	{
+	if (pReq->m_flag == CReqContext::IN_BODY) {
 		TRACE("IN_BODY\n");
-		if (pRawData->pvInData)
-		{
+		if (pRawData->pvInData) {
 			pReq->m_body->Append((char*)pRawData->pvInData, pRawData->cbInData);
 			pRawData->pvInData = NULL;
 			pRawData->cbInData = 0;
@@ -406,10 +373,8 @@ DWORD CKeywordsFilter::onEndOfRequest(HTTP_FILTER_CONTEXT* pfc)
 	if (!pReq || !pReq->doFilter || !pReq->m_body)
 		return dwRet;
 
-	if (pReq->m_item->encoding[0] == '\0')
-	{
-		if (m_config.autoDetectEncoding)
-		{
+	if (pReq->m_item->encoding[0] == '\0') {
+		if (m_config.autoDetectEncoding) {
 			// detect the code page
 			MIMECPINFO cpinfo;
 			UINT codepage = detectBestCodePage(NULL, *pReq->m_body, pReq->m_body->GetLength(), cpinfo);
@@ -417,15 +382,13 @@ DWORD CKeywordsFilter::onEndOfRequest(HTTP_FILTER_CONTEXT* pfc)
 			TRACE("Detected encoding is :%s\n", encod.m_psz);
 			strncpy_s(pReq->m_item->encoding, encod.m_psz, _TRUNCATE);
 		}
-		else
-		{
+		else {
 			strncpy_s(pReq->m_item->encoding, m_config.defaultEncoding, _TRUNCATE);
 		}
 	}
 	void *wumanber = NULL;
 	m_swm.WaitToRead();
-	if (!m_search.Lookup(pReq->m_item->encoding, wumanber))
-	{
+	if (!m_search.Lookup(pReq->m_item->encoding, wumanber)) {
 		TRACE("use defualt us-ascii wumanber\n");
 		wumanber = m_search["us-ascii"];
 	}
@@ -434,8 +397,7 @@ DWORD CKeywordsFilter::onEndOfRequest(HTTP_FILTER_CONTEXT* pfc)
 
 	if (wumanber 
 		&& mwmSearch(wumanber, (BYTE*)(pReq->m_body->Data() + pReq->m_bodyPos), 
-			pReq->m_body->GetLength() - pReq->m_bodyPos, match, pReq))
-	{
+			pReq->m_body->GetLength() - pReq->m_bodyPos, match, pReq)) {
 		TRACE("Found Keywords,do error report\n");
 		m_swm.WaitToWrite();
 		pReq->m_item->keywordIndex = pReq->m_index;
@@ -443,8 +405,7 @@ DWORD CKeywordsFilter::onEndOfRequest(HTTP_FILTER_CONTEXT* pfc)
 		m_swm.Done();
 		writeErrorToClient(pfc, pReq->m_index);
 	}
-	else
-	{
+	else {
 		TRACE("Have not Found Keywords,do normal output\n");
 		m_swm.WaitToWrite();
 		pReq->m_item->keywordIndex = -1;
@@ -463,8 +424,7 @@ bool CKeywordsFilter::loadKeywords(LPCSTR charsets)
 	bool bRet = false;
 	//::EnterCriticalSection(&m_crit);
 	POSITION pos = m_search.GetStartPosition();
-	while (pos)
-	{
+	while (pos) {
 		mwmFree(m_search.GetNext(pos)->m_value);
 	}
 	m_search.RemoveAll();
@@ -472,13 +432,11 @@ bool CKeywordsFilter::loadKeywords(LPCSTR charsets)
 
 	CComPtr<IMultiLanguage2> spML2;
 	HRESULT hr = ::CoCreateInstance(CLSID_CMultiLanguage, NULL, CLSCTX_INPROC_SERVER, IID_IMultiLanguage2, (LPVOID*)&spML2);
-	if (SUCCEEDED(hr))
-	{
+	if (SUCCEEDED(hr)) {
 		TCHAR path[MAX_PATH] = {'\0'};
 		::PathCombine(path, m_szModulePath, _T("keywords.txt"));
 		char* buffer = ReadFile(path);
-		if (buffer)
-		{
+		if (buffer) {
 			// defualt it : CP_USASCII Indicates the USASCII character set, Windows code page 1252. 
 			UINT srcCodePage = 20127; //us-ascii
 			MIMECPINFO mmInfo;
@@ -487,8 +445,7 @@ bool CKeywordsFilter::loadKeywords(LPCSTR charsets)
 			DWORD dwMode = 0;
 			UINT unicode_len = strlen(buffer) + 1;
 			WCHAR* unicode_key = new WCHAR[unicode_len];
-			if (SUCCEEDED(spML2->ConvertStringToUnicode(&dwMode, srcCodePage, buffer, NULL, unicode_key, &unicode_len)))
-			{
+			if (SUCCEEDED(spML2->ConvertStringToUnicode(&dwMode, srcCodePage, buffer, NULL, unicode_key, &unicode_len))) {
 				unicode_key[unicode_len] = _T('\0');
 				char* c = new char[strlen(charsets) + 6 + 1];
 				strcpy(c, charsets);
@@ -496,20 +453,15 @@ bool CKeywordsFilter::loadKeywords(LPCSTR charsets)
 				const char* sep = ",;\r\n";
 				char* next_token = NULL;
 				char* charset = strtok_s(c, sep, &next_token); 
-				while (charset)
-				{
-					if (charset[0] != '\0')
-					{
+				while (charset) {
+					if (charset[0] != '\0') {
 						strlwr(charset);
 						void *wumanber = NULL;
-						if (!m_search.Lookup(charset, wumanber))
-						{
+						if (!m_search.Lookup(charset, wumanber)) {
 							MIMECSETINFO info;
-							if (SUCCEEDED(spML2->GetCharsetInfo(CA2T(charset), &info)))
-							{
+							if (SUCCEEDED(spML2->GetCharsetInfo(CA2T(charset), &info))) {
 								wumanber = loadKeywords(spML2, unicode_key, info.uiInternetEncoding, strcmp(charset, "utf-8") == 0);
-								if (wumanber)
-								{
+								if (wumanber) {
 									TRACE("Succeeded to load keywords for encoding:%s\n", charset);
 									m_search.SetAt(charset, wumanber);
 								}
@@ -534,21 +486,17 @@ void* CKeywordsFilter::loadKeywords(IMultiLanguage2* pML, WCHAR* keywords, UINT 
 	UINT destSize = 0;
 	DWORD dwMode = 0;
 	void* wu = NULL;
-	if (SUCCEEDED(pML->ConvertStringFromUnicode(&dwMode, toCodePage, keywords, NULL, NULL, &destSize)))
-	{
+	if (SUCCEEDED(pML->ConvertStringFromUnicode(&dwMode, toCodePage, keywords, NULL, NULL, &destSize))) {
 		CHAR* dest = new CHAR[destSize + 1];
-		if (SUCCEEDED(pML->ConvertStringFromUnicode(&dwMode, toCodePage, keywords, NULL, dest, &destSize)))
-		{
+		if (SUCCEEDED(pML->ConvertStringFromUnicode(&dwMode, toCodePage, keywords, NULL, dest, &destSize))) {
 			dest[destSize] = '\0';
 			wu = mwmNew();
 			int i = 0;
 			char* next_token = NULL;
 			LPCSTR seps = ";,\r\n";
 			char* keyword = strtok_s(dest, seps, &next_token);
-			while (keyword)
-			{
-				if (keyword[0] != '\0')
-				{
+			while (keyword) {
+				if (keyword[0] != '\0') {
 					if (bFirst)
 					{
 						m_patterns.AddTail(keyword);
