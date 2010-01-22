@@ -44,8 +44,7 @@ void DlcReportEventA(WORD wType, LPCSTR pszMessage)
 
 	// Get a handle to use with ReportEvent(). 
 	hEventSource = RegisterEventSourceA(NULL, "IISKeywordsFilter");
-	if (hEventSource != NULL)
-	{
+	if (hEventSource != NULL) {
 		// Write to event log. 
 		ReportEventA(hEventSource, wType, 0, 0, NULL, 1, 0, (LPCSTR*) &lpszStrings[0], NULL);
 		DeregisterEventSource(hEventSource);
@@ -75,8 +74,7 @@ char * strnstr(const char *s, const char *find, size_t slen)
 char* FindHttpHeader( LPCSTR name, char*pInBuffer, DWORD size )
 {
 	char* pos = strnstr(pInBuffer, name, size);
-	if (pos)
-	{
+	if (pos) {
 		return pos + strlen(name);
 	}
 	return NULL;
@@ -87,15 +85,12 @@ char* ReadFile(LPCTSTR pszFile)
 {
 	char* buffer = NULL;
 	HANDLE hFile = ::CreateFile(pszFile, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-	if (hFile != INVALID_HANDLE_VALUE)
-	{
+	if (hFile != INVALID_HANDLE_VALUE) {
 		LARGE_INTEGER fileSize;
-		if (GetFileSizeEx(hFile, &fileSize))
-		{
+		if (GetFileSizeEx(hFile, &fileSize)) {
 			buffer = new char[(fileSize.QuadPart + 1) * sizeof(char*)];
 			DWORD bytesRead = 0;
-			if (::ReadFile(hFile, buffer, fileSize.QuadPart, &bytesRead, NULL))
-			{
+			if (::ReadFile(hFile, buffer, fileSize.QuadPart, &bytesRead, NULL)) {
 				buffer[fileSize.QuadPart] = '\0';
 				return buffer;
 			}
