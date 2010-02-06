@@ -497,8 +497,7 @@ void* CKeywordsFilter::loadKeywords(IMultiLanguage2* pML, WCHAR* keywords, UINT 
 			char* keyword = strtok_s(dest, seps, &next_token);
 			while (keyword) {
 				if (keyword[0] != '\0') {
-					if (bFirst)
-					{
+					if (bFirst) {
 						m_patterns.AddTail(keyword);
 					}
 					mwmAddPatternEx(wu, (BYTE*)keyword, strlen(keyword), 1, 0, 0, (void*)(i++), 0);
